@@ -1,5 +1,5 @@
 {
-  "name": "hljs-kaos",
+  "name": "@enspirit/hljs-kaos",
   "version": "1.0.0",
   "description": "Highlight.js grammar for KAOS specifications, functional dependencies, and relational constraints",
   "main": "src/kaos.js",
