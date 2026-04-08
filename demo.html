@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>hljs-kaos demo</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <style>
+    body { background: #1e1e2e; color: #cdd6f4; font-family: system-ui; max-width: 860px; margin: 2em auto; padding: 0 1em; }
+    h2 { color: #89b4fa; border-bottom: 1px solid #45475a; padding-bottom: .3em; }
+    pre code { border-radius: 8px; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+<h2>KAOS &mdash; Goal definition</h2>
+<pre><code class="language-kaos">Maintain[Home légitime par utilisateur]
+  Def: la home d'un utilisateur est un board partagé dans un workspace dont le user est membre
+  FormalDef: FORALL(u:User, b:Board, w:Workspace) isHome(u, b, w) IMPLIES (isMember(u, w) AND sharedIn(b, w))</code></pre>
+
+<h2>KAOS &mdash; Operationalization</h2>
+<pre><code class="language-kaos">Operation SetUserHome(u: User, b: Board, w: Workspace)
+  Def: définit un couple (board, workspace) comme home d'un utilisateur
+  DOM PRE: NOT isHome(u, b, w)
+  DOM POST: isHome(u, b, w)
+  REQ PRE for Maintain[Home légitime par utilisateur]: isMember(u, w) AND sharedIn(b, w)
+
+Operation DropMembership(u: User, w: Workspace)
+  Def: supprime un utilisateur d'un workspace
+  DOM PRE: isMember(u, w)
+  DOM POST: NOT isMember(u, w)
+  REQ POST for Maintain[...]: FORALL(b: Board) NOT isHome(u, b, w)
+
+Operation UnshareBoard(b: Board, w: Workspace)
+  Def: supprime le partage d'un board au sein d'un workspace
+  DOM PRE: sharedIn(b, w)
+  DOM POST: NOT sharedIn(b, w)
+  REQ POST for Maintain[...]: FORALL(u: User) NOT isHome(u, b, w)</code></pre>
+
+<h2>KAOS &mdash; Achieve goal</h2>
+<pre><code class="language-kaos">Achieve[Home conflictuelles supprimées]
+  FormalDef: FORALL(u:User, b:Board, w:Workspace) isHome(u,b,w) AND NOT(isMember(u,w) AND sharedIn(b,w)) IMPLIES NEXT(NOT isHome(u,b,w))
+
+Operation DropHome(u:User, b:Board, w:Workspace)
+  DOM PRE: isHome(u, b, w)
+  DOM POST: NOT isHome(u, b, w)
+  REQ TRIG for Achieve[Home conflictuelles supprimées]: ???</code></pre>
+
+<h2>KAOS &mdash; Alternative (blocking)</h2>
+<pre><code class="language-kaos">Operation DropMembership(u: User, w: Workspace)
+  DOM PRE: isMember(u, w)
+  DOM POST: NOT isMember(u, w)
+  REQ PRE for Maintain[...]: NOT EXISTS(b: Board) isHome(u, b, w)
+
+Operation SetUserHome(u: User, b: Board, w: Workspace)
+  DOM PRE: NOT isHome(u, b, w)
+  DOM POST: isHome(u, b, w)
+  REQ POST for Maintain[...]: isMember(u, w) AND sharedIn(b, w)</code></pre>
+
+<h2>Functional dependencies</h2>
+<pre><code class="language-kaos"># la table des users
+{ UserID } -> { UserName, ... }
+
+# la table des boards
+{ BoardID } -> { BoardName, ... }
+
+# isMember(u, w) : la table des membres de workspaces
+{ UserID, WorkspaceID } -> { MemberSince, ... }
+
+# sharedIn(b, w) : la table des boards des workspaces
+{ BoardID, WorkspaceID } -> { SharedSince, ... }
+
+# isHome(u, b, w) : la table des homes
+{ UserID } -> { BoardID, WorkspaceID }</code></pre>
+
+<h2>Relational constraints</h2>
+<pre><code class="language-kaos">isHome{ UserID, WorkspaceID }  IS SUBSET OF isMember{ UserID, WorkspaceID }
+AND
+isHome{ BoardID, WorkspaceID } IS SUBSET OF sharedIn{ BoardID, WorkspaceID }
+
+isHome{ ... } IS SUBSET OF isMember{ ... } ON DELETE CASCADE
+AND
+isHome{ ... } IS SUBSET OF sharedIn{ ... } ON DELETE CASCADE</code></pre>
+
+<h2>Imperative utilities</h2>
+<pre><code class="language-kaos">// Called by/On DropMembership
+Operation DropConflictualUserHome(u:User, w:Workspace)
+
+// Called by/On UnshareBoard
+Operation DropConflictualHomes(b:Board, w:Workspace)
+
+// Called by/On DropUser
+Operation DropAllUserHomes(u:User)
+
+// Called everytime we suspect a possible violation
+Operation DropAllConflictualHomes()</code></pre>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="./src/kaos.js"></script>
+<script>
+  hljs.registerLanguage('kaos', hljsKaos);
+  hljs.highlightAll();
+</script>
+
+</body>
+</html>
