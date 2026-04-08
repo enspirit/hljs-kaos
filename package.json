@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Highlight.js grammar for KAOS specifications, functional dependencies, and relational constraints",
   "main": "src/kaos.js",
+  "files": ["src/kaos.js"],
   "keywords": [
     "highlight.js",
     "highlightjs",
